@@ -3,6 +3,12 @@
   "name": "X 清净助手",
   "version": "0.1.0",
   "description": "本地自动隐藏 X 信息流和评论区中的低质账号、垃圾营销和重复内容。",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
   "permissions": ["storage"],
   "host_permissions": ["https://x.com/*", "https://twitter.com/*"],
   "content_scripts": [
@@ -15,7 +21,13 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "X 清净助手"
+    "default_title": "X 清净助手",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
   },
   "options_page": "options.html",
   "background": {

@@ -34,6 +34,17 @@ Load the generated `dist/` directory in Chrome:
 - `npm run dev`: run Vite for popup/options development.
 - `npm run typecheck`: run TypeScript checks.
 - `npm run build`: build popup/options with Vite and bundle content/background scripts for MV3.
+- `npm run package`: build and create a Chrome Web Store upload ZIP.
+
+## Publishing
+
+Chrome Web Store submission copy, privacy answers, review test instructions and the release checklist are in `docs/chrome-web-store/`.
+
+```bash
+npm run package
+```
+
+Upload the generated `cleanx-extension-<version>.zip` file in the Chrome Developer Dashboard.
 
 ## Architecture
 

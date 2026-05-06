@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="CleanX icon">
+  <rect width="128" height="128" rx="28" fill="#1d7f64"/>
+  <path d="M35 34h58L76 64l17 30H35l17-30L35 34z" fill="#ffffff" opacity="0.96"/>
+  <path d="M51 47h26L64 64l13 17H51l13-17-13-17z" fill="#1d7f64"/>
+  <path d="M30 93c14 8 54 8 68 0" fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round" opacity="0.85"/>
+</svg>
