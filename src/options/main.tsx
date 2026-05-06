@@ -18,6 +18,7 @@ function App() {
   const [whiteInput, setWhiteInput] = useState("");
   const [importText, setImportText] = useState("");
   const [error, setError] = useState("");
+  const [logMode, setLogMode] = useState<"risky" | "all">("risky");
 
   useEffect(() => {
     void refresh();
@@ -93,6 +94,8 @@ function App() {
   if (!settings || !stats) return <main className="page">加载中...</main>;
 
   const hasLegacyScanCount = detectionLog.length === 0 && stats.scannedAccountCount > 0;
+  const riskyDetectionLog = detectionLog.filter((entry) => entry.action !== "show");
+  const visibleDetectionLog = logMode === "risky" ? riskyDetectionLog : detectionLog;
 
   return (
     <main className="page">
@@ -173,8 +176,22 @@ function App() {
 
         <section className="section">
           <div className="row between">
-            <h2>最近识别账号</h2>
+            <h2>最近风险账号</h2>
             <div className="row">
+              <div className="segmented compact-tabs">
+                <button
+                  className={logMode === "risky" ? "active" : ""}
+                  onClick={() => setLogMode("risky")}
+                >
+                  风险
+                </button>
+                <button
+                  className={logMode === "all" ? "active" : ""}
+                  onClick={() => setLogMode("all")}
+                >
+                  全部
+                </button>
+              </div>
               <button onClick={refresh}>刷新</button>
               <button
                 className="danger"
@@ -204,7 +221,10 @@ function App() {
             {detectionLog.length === 0 && !hasLegacyScanCount ? (
               <div className="muted">暂无识别记录。打开或刷新 X 页面后会在这里出现账号明细。</div>
             ) : null}
-            {detectionLog.map((entry) => (
+            {detectionLog.length > 0 && visibleDetectionLog.length === 0 ? (
+              <div className="muted">暂无风险账号。当前扫描到的账号都没有达到折叠或隐藏阈值。</div>
+            ) : null}
+            {visibleDetectionLog.map((entry) => (
               <DetectionLogItem key={entry.username} entry={entry} />
             ))}
           </div>

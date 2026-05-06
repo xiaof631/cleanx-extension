@@ -148,6 +148,15 @@ textarea {
   color: #ffffff;
 }
 
+.segmented.compact-tabs {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(48px, auto));
+}
+
+.segmented.compact-tabs button {
+  padding: 7px 10px;
+}
+
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
