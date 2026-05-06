@@ -2,14 +2,16 @@ import React, { ChangeEvent, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { exportConfig, importConfig, loadSettings, saveSettings } from "../storage";
 import { addToBlacklist, loadBlacklist, removeFromBlacklist } from "../storage/blacklist";
+import { clearDetectionLog, loadDetectionLog } from "../storage/detectionLog";
 import { addToWhitelist, loadWhitelist, removeFromWhitelist } from "../storage/whitelist";
-import type { FilterLevel, HiddenMode, ListEntry, Settings } from "../shared/types";
+import type { DetectionLogEntry, FilterLevel, HiddenMode, ListEntry, Settings } from "../shared/types";
 import "../ui.css";
 
 function App() {
   const [settings, setSettings] = useState<Settings>();
   const [blacklist, setBlacklist] = useState<ListEntry[]>([]);
   const [whitelist, setWhitelist] = useState<ListEntry[]>([]);
+  const [detectionLog, setDetectionLog] = useState<DetectionLogEntry[]>([]);
   const [blackInput, setBlackInput] = useState("");
   const [whiteInput, setWhiteInput] = useState("");
   const [importText, setImportText] = useState("");
@@ -20,14 +22,16 @@ function App() {
   }, []);
 
   async function refresh() {
-    const [nextSettings, nextBlacklist, nextWhitelist] = await Promise.all([
+    const [nextSettings, nextBlacklist, nextWhitelist, nextDetectionLog] = await Promise.all([
       loadSettings(),
       loadBlacklist(),
-      loadWhitelist()
+      loadWhitelist(),
+      loadDetectionLog()
     ]);
     setSettings(nextSettings);
     setBlacklist(nextBlacklist);
     setWhitelist(nextWhitelist);
+    setDetectionLog(nextDetectionLog);
   }
 
   async function updateSettings(patch: Partial<Settings>) {
@@ -162,6 +166,30 @@ function App() {
         </div>
 
         <section className="section">
+          <div className="row between">
+            <h2>最近识别账号</h2>
+            <div className="row">
+              <button onClick={refresh}>刷新</button>
+              <button
+                className="danger"
+                onClick={async () => {
+                  await clearDetectionLog();
+                  await refresh();
+                }}
+              >
+                清空
+              </button>
+            </div>
+          </div>
+          <div className="list">
+            {detectionLog.length === 0 ? <div className="muted">暂无识别记录。打开或刷新 X 页面后会在这里出现账号明细。</div> : null}
+            {detectionLog.map((entry) => (
+              <DetectionLogItem key={entry.username} entry={entry} />
+            ))}
+          </div>
+        </section>
+
+        <section className="section">
           <h2>数据导入 / 导出</h2>
           <div className="stack">
             <div className="row wrap">
@@ -188,6 +216,31 @@ function App() {
         </section>
       </div>
     </main>
+  );
+}
+
+function DetectionLogItem({ entry }: { entry: DetectionLogEntry }) {
+  const reasonText = entry.reasons.length
+    ? entry.reasons.map((reason) => reason.label).join("、")
+    : "未命中高风险规则";
+
+  return (
+    <div className="list-item align-start">
+      <div className="stack compact">
+        <div>
+          <span className="handle">@{entry.username}</span>
+          {entry.displayName ? <span className="muted"> · {entry.displayName}</span> : null}
+        </div>
+        <div className="row wrap">
+          <span className={`badge badge-${entry.action}`}>{actionLabel(entry.action)}</span>
+          <span className="muted">风险分 {entry.score}</span>
+          <span className="muted">{sourceLabel(entry.source)}</span>
+          <span className="muted">出现 {entry.seenCount} 次</span>
+        </div>
+        <div className="muted">{reasonText}</div>
+        <div className="muted">最近：{formatTime(entry.lastSeenAt)}</div>
+      </div>
+    </div>
   );
 }
 
@@ -233,6 +286,28 @@ function ListManager({
 
 function levelLabel(level: FilterLevel) {
   return level === "light" ? "轻度" : level === "standard" ? "标准" : "严格";
+}
+
+function actionLabel(action: DetectionLogEntry["action"]) {
+  if (action === "hide") return "隐藏";
+  if (action === "collapse") return "折叠";
+  return "展示";
+}
+
+function sourceLabel(source: DetectionLogEntry["source"]) {
+  if (source === "comment") return "评论区";
+  if (source === "search") return "搜索";
+  if (source === "profile") return "资料";
+  return "时间线";
+}
+
+function formatTime(value: string) {
+  return new Intl.DateTimeFormat("zh-CN", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(new Date(value));
 }
 
 createRoot(document.getElementById("root")!).render(<App />);

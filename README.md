@@ -12,6 +12,7 @@ Chrome Extension Manifest V3 MVP for locally hiding low-quality accounts and spa
 - Supports local blacklist and whitelist through `chrome.storage.local`.
 - Provides popup controls for enable/disable, 30-minute pause, filter strength and daily stats.
 - Provides an options page for settings, list management and JSON import/export.
+- Shows the latest locally detected accounts with source, action, score and rule reasons.
 - Does not call X APIs, automate blocking, or upload browsing data.
 
 ## Development

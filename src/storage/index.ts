@@ -93,6 +93,7 @@ export async function resetDailyStatsIfNeeded(stats: DailyStats): Promise<DailyS
     date: today,
     hiddenCount: 0,
     scannedAccountCount: 0,
-    restoreCount: 0
+    restoreCount: 0,
+    scannedUsernames: []
   };
 }

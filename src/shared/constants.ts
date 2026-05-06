@@ -4,7 +4,8 @@ export const STORAGE_KEYS = {
   settings: "cleanx:settings",
   blacklist: "cleanx:blacklist",
   whitelist: "cleanx:whitelist",
-  stats: "cleanx:stats"
+  stats: "cleanx:stats",
+  detectionLog: "cleanx:detectionLog"
 } as const;
 
 export const DEFAULT_SETTINGS: Settings = {

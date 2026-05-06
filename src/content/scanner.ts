@@ -1,5 +1,6 @@
 import { detect } from "../detector";
 import { loadSettings } from "../storage";
+import { recordDetection } from "../storage/detectionLog";
 import { incrementScannedAccountCount } from "../storage/stats";
 import { PROCESSED_ATTR, STORAGE_KEYS } from "../shared/constants";
 import type { Settings } from "../shared/types";
@@ -23,11 +24,12 @@ export async function processContentNode(node: Element) {
   const payload = extractContentNode(node);
   if (!payload) return;
 
-  await incrementScannedAccountCount();
+  await incrementScannedAccountCount(payload.account.username);
   const result = await detect(payload.account, payload.content, {
     settings,
     recoveredUsernames
   });
+  await recordDetection(payload, result);
 
   applyAction(node, payload, result, settings, {
     onRestore(username) {

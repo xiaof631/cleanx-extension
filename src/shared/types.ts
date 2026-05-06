@@ -55,6 +55,19 @@ export interface DailyStats {
   hiddenCount: number;
   scannedAccountCount: number;
   restoreCount: number;
+  scannedUsernames?: string[];
+}
+
+export interface DetectionLogEntry {
+  username: string;
+  displayName?: string;
+  source: ContentSource;
+  action: DetectionAction;
+  score: number;
+  reasons: DetectionReason[];
+  firstSeenAt: string;
+  lastSeenAt: string;
+  seenCount: number;
 }
 
 export interface ExportedConfig {
