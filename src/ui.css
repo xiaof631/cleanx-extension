@@ -233,3 +233,21 @@ textarea {
   color: #b42318;
   font-size: 13px;
 }
+
+.notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid #fedf89;
+  border-radius: 8px;
+  background: #fffaeb;
+  color: #93370d;
+  padding: 10px;
+  font-size: 13px;
+}
+
+.notice button {
+  flex: 0 0 auto;
+  border-color: #fdb022;
+}

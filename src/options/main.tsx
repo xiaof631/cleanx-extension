@@ -3,12 +3,14 @@ import { createRoot } from "react-dom/client";
 import { exportConfig, importConfig, loadSettings, saveSettings } from "../storage";
 import { addToBlacklist, loadBlacklist, removeFromBlacklist } from "../storage/blacklist";
 import { clearDetectionLog, loadDetectionLog } from "../storage/detectionLog";
+import { loadStats, resetTodayStats } from "../storage/stats";
 import { addToWhitelist, loadWhitelist, removeFromWhitelist } from "../storage/whitelist";
-import type { DetectionLogEntry, FilterLevel, HiddenMode, ListEntry, Settings } from "../shared/types";
+import type { DailyStats, DetectionLogEntry, FilterLevel, HiddenMode, ListEntry, Settings } from "../shared/types";
 import "../ui.css";
 
 function App() {
   const [settings, setSettings] = useState<Settings>();
+  const [stats, setStats] = useState<DailyStats>();
   const [blacklist, setBlacklist] = useState<ListEntry[]>([]);
   const [whitelist, setWhitelist] = useState<ListEntry[]>([]);
   const [detectionLog, setDetectionLog] = useState<DetectionLogEntry[]>([]);
@@ -22,13 +24,15 @@ function App() {
   }, []);
 
   async function refresh() {
-    const [nextSettings, nextBlacklist, nextWhitelist, nextDetectionLog] = await Promise.all([
+    const [nextSettings, nextStats, nextBlacklist, nextWhitelist, nextDetectionLog] = await Promise.all([
       loadSettings(),
+      loadStats(),
       loadBlacklist(),
       loadWhitelist(),
       loadDetectionLog()
     ]);
     setSettings(nextSettings);
+    setStats(nextStats);
     setBlacklist(nextBlacklist);
     setWhitelist(nextWhitelist);
     setDetectionLog(nextDetectionLog);
@@ -86,7 +90,9 @@ function App() {
     reader.readAsText(file);
   }
 
-  if (!settings) return <main className="page">加载中...</main>;
+  if (!settings || !stats) return <main className="page">加载中...</main>;
+
+  const hasLegacyScanCount = detectionLog.length === 0 && stats.scannedAccountCount > 0;
 
   return (
     <main className="page">
@@ -182,7 +188,22 @@ function App() {
             </div>
           </div>
           <div className="list">
-            {detectionLog.length === 0 ? <div className="muted">暂无识别记录。打开或刷新 X 页面后会在这里出现账号明细。</div> : null}
+            {hasLegacyScanCount ? (
+              <div className="notice">
+                当前有旧版统计的 {stats.scannedAccountCount} 个识别账号，但旧版没有保存账号明细。刷新 X 页面并滚动后，新识别记录会出现在这里。
+                <button
+                  onClick={async () => {
+                    await resetTodayStats();
+                    await refresh();
+                  }}
+                >
+                  清空今日统计
+                </button>
+              </div>
+            ) : null}
+            {detectionLog.length === 0 && !hasLegacyScanCount ? (
+              <div className="muted">暂无识别记录。打开或刷新 X 页面后会在这里出现账号明细。</div>
+            ) : null}
             {detectionLog.map((entry) => (
               <DetectionLogItem key={entry.username} entry={entry} />
             ))}

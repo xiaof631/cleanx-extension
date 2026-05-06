@@ -19,6 +19,16 @@ export async function saveStats(stats: DailyStats): Promise<void> {
   await setInStorage(STORAGE_KEYS.stats, stats);
 }
 
+export async function resetTodayStats(): Promise<void> {
+  await saveStats({
+    date: todayKey(),
+    hiddenCount: 0,
+    scannedAccountCount: 0,
+    restoreCount: 0,
+    scannedUsernames: []
+  });
+}
+
 export async function incrementHiddenCount(): Promise<void> {
   const stats = await loadStats();
   await saveStats({ ...stats, hiddenCount: stats.hiddenCount + 1 });

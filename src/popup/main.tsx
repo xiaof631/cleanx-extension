@@ -2,14 +2,16 @@ import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { loadSettings, saveSettings } from "../storage";
 import { loadBlacklist } from "../storage/blacklist";
+import { loadDetectionLog } from "../storage/detectionLog";
 import { loadStats } from "../storage/stats";
 import { loadWhitelist } from "../storage/whitelist";
-import type { DailyStats, FilterLevel, Settings } from "../shared/types";
+import type { DailyStats, DetectionLogEntry, FilterLevel, Settings } from "../shared/types";
 import "../ui.css";
 
 function App() {
   const [settings, setSettings] = useState<Settings>();
   const [stats, setStats] = useState<DailyStats>();
+  const [detectionLog, setDetectionLog] = useState<DetectionLogEntry[]>([]);
   const [blacklistCount, setBlacklistCount] = useState(0);
   const [whitelistCount, setWhitelistCount] = useState(0);
 
@@ -18,14 +20,16 @@ function App() {
   }, []);
 
   async function refresh() {
-    const [nextSettings, nextStats, blacklist, whitelist] = await Promise.all([
+    const [nextSettings, nextStats, blacklist, whitelist, nextDetectionLog] = await Promise.all([
       loadSettings(),
       loadStats(),
       loadBlacklist(),
-      loadWhitelist()
+      loadWhitelist(),
+      loadDetectionLog()
     ]);
     setSettings(nextSettings);
     setStats(nextStats);
+    setDetectionLog(nextDetectionLog);
     setBlacklistCount(blacklist.length);
     setWhitelistCount(whitelist.length);
   }
@@ -47,6 +51,7 @@ function App() {
   if (!settings || !stats) return <div className="popup">加载中...</div>;
 
   const paused = settings.pauseUntil && Date.now() < new Date(settings.pauseUntil).getTime();
+  const todayDetectedCount = detectionLog.filter((entry) => isToday(entry.lastSeenAt)).length;
 
   return (
     <main className="popup">
@@ -71,7 +76,7 @@ function App() {
         <h2>今日净化</h2>
         <div className="stat-grid">
           <Stat label="已隐藏" value={stats.hiddenCount} />
-          <Stat label="识别账号" value={stats.scannedAccountCount} />
+          <Stat label="识别账号" value={todayDetectedCount} />
           <Stat label="恢复次数" value={stats.restoreCount} />
           <Stat label="名单账号" value={blacklistCount + whitelistCount} />
         </div>
@@ -111,6 +116,16 @@ function Stat({ label, value }: { label: string; value: number }) {
 
 function levelLabel(level: FilterLevel) {
   return level === "light" ? "轻度" : level === "standard" ? "标准" : "严格";
+}
+
+function isToday(value: string) {
+  const date = new Date(value);
+  const today = new Date();
+  return (
+    date.getFullYear() === today.getFullYear() &&
+    date.getMonth() === today.getMonth() &&
+    date.getDate() === today.getDate()
+  );
 }
 
 createRoot(document.getElementById("root")!).render(<App />);
