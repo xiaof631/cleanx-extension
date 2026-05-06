@@ -1,21 +1,44 @@
 # X 清净助手 / CleanX
 
-Chrome Extension Manifest V3 MVP for locally hiding low-quality accounts and spam-like content on X/Twitter.
+CleanX is a local-first Chrome extension for reducing low-quality account content on X/Twitter.
 
-## MVP Scope
+It scans visible X/Twitter web pages in the browser, scores content with local rules, and lets users hide, collapse, restore, blacklist or whitelist accounts without uploading timeline data.
+
+## Status
+
+CleanX is currently an MVP for Chrome Extension Manifest V3.
+
+The project is open source under the MIT License. Review the code, rules and permissions before installing or publishing your own build.
+
+## Features
 
 - Supports `https://x.com/*` and `https://twitter.com/*`.
-- Injects a content script that scans `article` nodes with `MutationObserver`.
-- Extracts account handle, display name and content text from the page DOM.
-- Scores content with local rules only.
-- Hides high-risk content with a placeholder that supports restore, whitelist and details.
-- Supports local blacklist and whitelist through `chrome.storage.local`.
-- Provides popup controls for enable/disable, 30-minute pause, filter strength and daily stats.
-- Provides an options page for settings, list management and JSON import/export.
-- Shows the latest locally detected accounts with source, action, score and rule reasons.
-- Does not call X APIs, automate blocking, or upload browsing data.
+- Scans timeline, tweet detail pages and search results through a content script.
+- Uses local rules for risk scoring.
+- Supports three filter strengths: light, standard and strict.
+- Supports three handling modes: placeholder hide, collapse and blur.
+- Provides restore and whitelist actions for recoverability.
+- Supports local blacklist and whitelist.
+- Shows local daily stats and recent risky accounts.
+- Supports JSON import/export for configuration.
+- Stores settings and lists in `chrome.storage.local`.
 
-## Development
+## Privacy Principles
+
+CleanX V0.1 is designed around these boundaries:
+
+- No X/Twitter API calls.
+- No private API usage.
+- No remote classification service.
+- No telemetry.
+- No timeline upload.
+- No browsing history upload.
+- No cross-site tracking.
+- No automated blocking, muting, liking, following or posting.
+
+All matching runs locally in the browser. Import and export only happen when the user triggers them.
+
+## Install From Source
 
 ```bash
 npm install
@@ -29,22 +52,20 @@ Load the generated `dist/` directory in Chrome:
 3. Click "Load unpacked".
 4. Select this repository's `dist/` directory.
 
-## Scripts
+## Development
+
+```bash
+npm install
+npm run typecheck
+npm run build
+```
+
+Useful scripts:
 
 - `npm run dev`: run Vite for popup/options development.
 - `npm run typecheck`: run TypeScript checks.
-- `npm run build`: build popup/options with Vite and bundle content/background scripts for MV3.
+- `npm run build`: build popup/options and bundle MV3 scripts.
 - `npm run package`: build and create a Chrome Web Store upload ZIP.
-
-## Publishing
-
-Chrome Web Store submission copy, privacy answers, review test instructions and the release checklist are in `docs/chrome-web-store/`.
-
-```bash
-npm run package
-```
-
-Upload the generated `cleanx-extension-<version>.zip` file in the Chrome Developer Dashboard.
 
 ## Architecture
 
@@ -59,6 +80,26 @@ src/
 └── storage/          chrome.storage.local helpers
 ```
 
-## Privacy Boundary
+## Publishing
 
-CleanX V0.1 keeps all matching and settings local. It does not upload timeline content, browse history, account relationships, or rule hits. Import/export only happens when the user explicitly triggers it.
+Chrome Web Store submission copy, privacy answers, review test instructions and the release checklist are in [docs/chrome-web-store](./docs/chrome-web-store/).
+
+```bash
+npm run package
+```
+
+Upload the generated `cleanx-extension-<version>.zip` file in the Chrome Developer Dashboard.
+
+## Contributing
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md).
+
+Rule changes should be conservative and explain false-positive risk. Privacy or permission changes must update the Chrome Web Store documentation.
+
+## Security
+
+See [SECURITY.md](./SECURITY.md).
+
+## License
+
+MIT. See [LICENSE](./LICENSE).
