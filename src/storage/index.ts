@@ -7,13 +7,23 @@ function hasChromeStorage() {
 
 export async function getFromStorage<T>(key: string, fallback: T): Promise<T> {
   if (!hasChromeStorage()) return fallback;
-  const result = await chrome.storage.local.get(key);
-  return (result[key] ?? fallback) as T;
+  try {
+    const result = await chrome.storage.local.get(key);
+    return (result[key] ?? fallback) as T;
+  } catch (error) {
+    if (isExtensionContextInvalidated(error)) return fallback;
+    throw error;
+  }
 }
 
 export async function setInStorage<T>(key: string, value: T): Promise<void> {
   if (!hasChromeStorage()) return;
-  await chrome.storage.local.set({ [key]: value });
+  try {
+    await chrome.storage.local.set({ [key]: value });
+  } catch (error) {
+    if (isExtensionContextInvalidated(error)) return;
+    throw error;
+  }
 }
 
 export async function loadSettings(): Promise<Settings> {
@@ -59,11 +69,19 @@ export async function importConfig(config: ExportedConfig): Promise<void> {
     throw new Error("不支持的配置版本");
   }
 
-  await chrome.storage.local.set({
-    [STORAGE_KEYS.settings]: { ...DEFAULT_SETTINGS, ...config.settings },
-    [STORAGE_KEYS.blacklist]: normalizeEntries(config.blacklist ?? []),
-    [STORAGE_KEYS.whitelist]: normalizeEntries(config.whitelist ?? [])
-  });
+  await setInStorage(STORAGE_KEYS.settings, { ...DEFAULT_SETTINGS, ...config.settings });
+  await setInStorage(STORAGE_KEYS.blacklist, normalizeEntries(config.blacklist ?? []));
+  await setInStorage(STORAGE_KEYS.whitelist, normalizeEntries(config.whitelist ?? []));
+}
+
+export function isExtensionContextInvalidated(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes("Extension context invalidated");
+}
+
+export function ignoreExtensionContextInvalidated(error: unknown): void {
+  if (isExtensionContextInvalidated(error)) return;
+  throw error;
 }
 
 export function normalizeEntries(entries: ListEntry[]): ListEntry[] {

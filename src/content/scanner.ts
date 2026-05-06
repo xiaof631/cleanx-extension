@@ -1,5 +1,5 @@
 import { detect } from "../detector";
-import { loadSettings } from "../storage";
+import { ignoreExtensionContextInvalidated, loadSettings } from "../storage";
 import { recordDetection } from "../storage/detectionLog";
 import { incrementScannedAccountCount } from "../storage/stats";
 import { PROCESSED_ATTR, STORAGE_KEYS } from "../shared/constants";
@@ -75,12 +75,14 @@ export function watchStorageChanges() {
     ] as string[];
     if (!relevantKeys.some((key) => key in changes)) return;
 
-    void loadSettings().then((settings) => {
-      settingsCache = settings;
-      restoreCleanXNodes();
-      clearProcessedMarks();
-      if (settings.enabled) scanExistingNodes();
-    });
+    void loadSettings()
+      .then((settings) => {
+        settingsCache = settings;
+        restoreCleanXNodes();
+        clearProcessedMarks();
+        if (settings.enabled) scanExistingNodes();
+      })
+      .catch(ignoreExtensionContextInvalidated);
   });
 }
 
@@ -92,7 +94,9 @@ function enqueueNodes(nodes: Element[]) {
     const batch = Array.from(pendingNodes);
     pendingNodes.clear();
     flushTimer = undefined;
-    batch.forEach((node) => void processContentNode(node));
+    batch.forEach((node) => {
+      void processContentNode(node).catch(ignoreExtensionContextInvalidated);
+    });
   }, 120);
 }
 

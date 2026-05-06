@@ -1,4 +1,4 @@
-import { normalizeUsername } from "../storage";
+import { ignoreExtensionContextInvalidated, normalizeUsername } from "../storage";
 import { addToWhitelist } from "../storage/whitelist";
 import { incrementHiddenCount, incrementRestoreCount } from "../storage/stats";
 import { HIDDEN_ATTR } from "../shared/constants";
@@ -74,7 +74,7 @@ function hideWithPlaceholder(
   node.before(placeholder);
   node.classList.add("cleanx-hidden-node");
   node.setAttribute(HIDDEN_ATTR, "true");
-  void incrementHiddenCount();
+  void incrementHiddenCount().catch(ignoreExtensionContextInvalidated);
 
   placeholder.addEventListener("click", (event) => {
     const target = event.target;
@@ -88,9 +88,11 @@ function hideWithPlaceholder(
     }
 
     if (action === "whitelist") {
-      void addToWhitelist(payload.account, payload.content.source).then(() => {
-        restoreNode(node, placeholder, username, options);
-      });
+      void addToWhitelist(payload.account, payload.content.source)
+        .then(() => {
+          restoreNode(node, placeholder, username, options);
+        })
+        .catch(ignoreExtensionContextInvalidated);
       return;
     }
 
@@ -111,7 +113,7 @@ function restoreNode(
   node.removeAttribute(HIDDEN_ATTR);
   placeholder.remove();
   options.onRestore(username);
-  void incrementRestoreCount();
+  void incrementRestoreCount().catch(ignoreExtensionContextInvalidated);
 }
 
 function escapeHtml(value: string) {

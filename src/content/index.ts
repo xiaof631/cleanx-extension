@@ -1,4 +1,4 @@
-import { loadSettings } from "../storage";
+import { isExtensionContextInvalidated, loadSettings } from "../storage";
 import { restoreCleanXNodes } from "./renderer";
 import { scanExistingNodes, startObserve, watchStorageChanges } from "./scanner";
 
@@ -20,5 +20,6 @@ async function bootstrap() {
 }
 
 void bootstrap().catch((error) => {
+  if (isExtensionContextInvalidated(error)) return;
   console.error("[CleanX] bootstrap failed", error);
 });
