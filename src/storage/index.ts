@@ -1,8 +1,22 @@
 import { DEFAULT_SETTINGS, STORAGE_KEYS } from "../shared/constants";
 import type { DailyStats, ExportedConfig, ListEntry, Settings } from "../shared/types";
 
-function hasChromeStorage() {
-  return typeof chrome !== "undefined" && Boolean(chrome.storage?.local);
+export function hasChromeStorage() {
+  try {
+    return typeof chrome !== "undefined" && Boolean(chrome.storage?.local);
+  } catch (error) {
+    if (isExtensionContextInvalidated(error)) return false;
+    throw error;
+  }
+}
+
+export function hasChromeStorageChangeListener() {
+  try {
+    return typeof chrome !== "undefined" && Boolean(chrome.storage?.onChanged);
+  } catch (error) {
+    if (isExtensionContextInvalidated(error)) return false;
+    throw error;
+  }
 }
 
 export async function getFromStorage<T>(key: string, fallback: T): Promise<T> {

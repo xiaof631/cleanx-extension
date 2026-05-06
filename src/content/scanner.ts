@@ -1,5 +1,5 @@
 import { detect } from "../detector";
-import { ignoreExtensionContextInvalidated, loadSettings } from "../storage";
+import { hasChromeStorageChangeListener, ignoreExtensionContextInvalidated, loadSettings } from "../storage";
 import { recordDetection } from "../storage/detectionLog";
 import { incrementScannedAccountCount } from "../storage/stats";
 import { PROCESSED_ATTR, STORAGE_KEYS } from "../shared/constants";
@@ -64,26 +64,30 @@ export function startObserve() {
 }
 
 export function watchStorageChanges() {
-  if (typeof chrome === "undefined" || !chrome.storage?.onChanged) return;
+  if (!hasChromeStorageChangeListener()) return;
 
-  chrome.storage.onChanged.addListener((changes, areaName) => {
-    if (areaName !== "local") return;
-    const relevantKeys = [
-      STORAGE_KEYS.settings,
-      STORAGE_KEYS.blacklist,
-      STORAGE_KEYS.whitelist
-    ] as string[];
-    if (!relevantKeys.some((key) => key in changes)) return;
+  try {
+    chrome.storage.onChanged.addListener((changes, areaName) => {
+      if (areaName !== "local") return;
+      const relevantKeys = [
+        STORAGE_KEYS.settings,
+        STORAGE_KEYS.blacklist,
+        STORAGE_KEYS.whitelist
+      ] as string[];
+      if (!relevantKeys.some((key) => key in changes)) return;
 
-    void loadSettings()
-      .then((settings) => {
-        settingsCache = settings;
-        restoreCleanXNodes();
-        clearProcessedMarks();
-        if (settings.enabled) scanExistingNodes();
-      })
-      .catch(ignoreExtensionContextInvalidated);
-  });
+      void loadSettings()
+        .then((settings) => {
+          settingsCache = settings;
+          restoreCleanXNodes();
+          clearProcessedMarks();
+          if (settings.enabled) scanExistingNodes();
+        })
+        .catch(ignoreExtensionContextInvalidated);
+    });
+  } catch (error) {
+    ignoreExtensionContextInvalidated(error);
+  }
 }
 
 function enqueueNodes(nodes: Element[]) {
