@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "X 清净助手",
+  "version": "0.1.0",
+  "description": "本地自动隐藏 X 信息流和评论区中的低质账号、垃圾营销和重复内容。",
+  "permissions": ["storage"],
+  "host_permissions": ["https://x.com/*", "https://twitter.com/*"],
+  "content_scripts": [
+    {
+      "matches": ["https://x.com/*", "https://twitter.com/*"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "X 清净助手"
+  },
+  "options_page": "options.html",
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  }
+}
