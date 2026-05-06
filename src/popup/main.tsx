@@ -51,7 +51,9 @@ function App() {
   if (!settings || !stats) return <div className="popup">加载中...</div>;
 
   const paused = settings.pauseUntil && Date.now() < new Date(settings.pauseUntil).getTime();
-  const todayDetectedCount = detectionLog.filter((entry) => isToday(entry.lastSeenAt)).length;
+  const todayRiskyAccountCount = detectionLog.filter(
+    (entry) => isToday(entry.lastSeenAt) && entry.action !== "show"
+  ).length;
 
   return (
     <main className="popup">
@@ -76,7 +78,7 @@ function App() {
         <h2>今日净化</h2>
         <div className="stat-grid">
           <Stat label="已隐藏" value={stats.hiddenCount} />
-          <Stat label="识别账号" value={todayDetectedCount} />
+          <Stat label="风险账号" value={todayRiskyAccountCount} />
           <Stat label="恢复次数" value={stats.restoreCount} />
           <Stat label="名单账号" value={blacklistCount + whitelistCount} />
         </div>
