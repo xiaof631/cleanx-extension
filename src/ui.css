@@ -233,6 +233,11 @@ textarea {
   background: #fef3f2;
 }
 
+.badge-success {
+  color: #027a48;
+  background: #ecfdf3;
+}
+
 .muted {
   color: #5c6b79;
   font-size: 12px;
@@ -259,4 +264,8 @@ textarea {
 .notice button {
   flex: 0 0 auto;
   border-color: #fdb022;
+}
+
+.compact-result-list {
+  margin-bottom: 10px;
 }

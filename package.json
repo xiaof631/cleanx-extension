@@ -7,6 +7,7 @@
     "dev": "vite --host 127.0.0.1",
     "build": "vite build && esbuild src/content/index.ts --bundle --format=iife --target=chrome114 --outfile=dist/content.js && esbuild src/background/index.ts --bundle --format=esm --target=chrome114 --outfile=dist/background.js",
     "typecheck": "tsc --noEmit",
+    "test": "tsc -p tsconfig.test.json --noEmit && esbuild tests/detector/scoring.test.ts --bundle --platform=node --format=esm --outfile=.test-dist/scoring.test.js && node --test .test-dist/scoring.test.js",
     "package": "bash scripts/package-extension.sh"
   },
   "dependencies": {

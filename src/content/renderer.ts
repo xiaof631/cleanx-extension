@@ -1,8 +1,10 @@
-import { ignoreExtensionContextInvalidated, normalizeUsername } from "../storage";
+import { ignoreExtensionContextInvalidated, isExtensionContextInvalidated, normalizeUsername } from "../storage";
+import { addToBlacklist } from "../storage/blacklist";
 import { addToWhitelist } from "../storage/whitelist";
 import { incrementHiddenCount, incrementRestoreCount } from "../storage/stats";
 import { HIDDEN_ATTR } from "../shared/constants";
 import type { DetectionResult, ExtractedPayload, Settings } from "../shared/types";
+import { blockAccountOnX } from "./block";
 
 interface RendererOptions {
   onRestore: (username: string) => void;
@@ -60,9 +62,12 @@ function hideWithPlaceholder(
     <div class="cleanx-placeholder__row">
       <span class="cleanx-placeholder__title">已隐藏疑似低质账号内容</span>
       <button type="button" data-cleanx-action="restore">恢复</button>
+      <button type="button" data-cleanx-action="blacklist">加入黑名单</button>
       <button type="button" data-cleanx-action="whitelist">加入白名单</button>
+      <button type="button" class="cleanx-danger" data-cleanx-action="block">在 X 上 Block</button>
       <button type="button" data-cleanx-action="detail">详情</button>
     </div>
+    <div class="cleanx-placeholder__status" hidden></div>
     <div class="cleanx-placeholder__details" hidden>
       <div>风险分：${result.score}</div>
       <ul>
@@ -96,6 +101,44 @@ function hideWithPlaceholder(
       return;
     }
 
+    if (action === "blacklist") {
+      setPlaceholderBusyState(placeholder, true, "已加入本地黑名单");
+      void addToBlacklist(payload.account, payload.content.source)
+        .then(() => {
+          setPlaceholderBusyState(placeholder, false, "已加入本地黑名单");
+        })
+        .catch((error) => {
+          setPlaceholderBusyState(
+            placeholder,
+            false,
+            error instanceof Error ? error.message : "加入本地黑名单失败"
+          );
+          if (!isExtensionContextInvalidated(error)) {
+            console.error("[CleanX] addToBlacklist failed", error);
+          }
+        });
+      return;
+    }
+
+    if (action === "block") {
+      setPlaceholderBusyState(placeholder, true, `正在在 X 上 Block @${username}...`);
+      void blockAccountOnX(node, payload)
+        .then(() => {
+          setPlaceholderBusyState(placeholder, false, `已在 X 上 Block @${username}，并加入本地黑名单`);
+        })
+        .catch((error) => {
+          setPlaceholderBusyState(
+            placeholder,
+            false,
+            error instanceof Error ? error.message : "在 X 上 Block 失败"
+          );
+          if (!isExtensionContextInvalidated(error)) {
+            console.error("[CleanX] blockAccountOnX failed", error);
+          }
+        });
+      return;
+    }
+
     if (action === "detail") {
       const details = placeholder.querySelector<HTMLElement>(".cleanx-placeholder__details");
       if (details) details.hidden = !details.hidden;
@@ -114,6 +157,20 @@ function restoreNode(
   placeholder.remove();
   options.onRestore(username);
   void incrementRestoreCount().catch(ignoreExtensionContextInvalidated);
+}
+
+function setPlaceholderBusyState(placeholder: HTMLElement, busy: boolean, message: string) {
+  const status = placeholder.querySelector<HTMLElement>(".cleanx-placeholder__status");
+  if (status) {
+    status.hidden = false;
+    status.textContent = message;
+  }
+
+  placeholder.querySelectorAll<HTMLButtonElement>("button").forEach((button) => {
+    const isDetailButton = button.dataset.cleanxAction === "detail";
+    const isRestoreButton = button.dataset.cleanxAction === "restore";
+    button.disabled = busy && !isDetailButton && !isRestoreButton;
+  });
 }
 
 function escapeHtml(value: string) {

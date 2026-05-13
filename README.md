@@ -19,6 +19,7 @@ The project is open source under the MIT License. Review the code, rules and per
 - Supports three handling modes: placeholder hide, collapse and blur.
 - Provides restore and whitelist actions for recoverability.
 - Supports local blacklist and whitelist.
+- Supports user-initiated blocking on X through page UI automation.
 - Shows local daily stats and recent risky accounts.
 - Supports JSON import/export for configuration.
 - Stores settings and lists in `chrome.storage.local`.
@@ -34,7 +35,8 @@ CleanX V0.1 is designed around these boundaries:
 - No timeline upload.
 - No browsing history upload.
 - No cross-site tracking.
-- No automated blocking, muting, liking, following or posting.
+- No automatic or bulk blocking, muting, liking, following or posting.
+- User-initiated blocking is executed locally by automating the visible X page UI after an explicit click.
 
 All matching runs locally in the browser. Import and export only happen when the user triggers them.
 

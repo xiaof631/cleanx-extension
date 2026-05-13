@@ -82,3 +82,19 @@ export interface ExtractedPayload {
   account: AccountInfo;
   content: ContentInfo;
 }
+
+export interface BatchBlockRequest {
+  type: "cleanx:block-usernames";
+  usernames: string[];
+}
+
+export interface BatchBlockResultItem {
+  username: string;
+  status: "blocked" | "not_found" | "failed";
+  message?: string;
+}
+
+export interface BatchBlockResponse {
+  ok: boolean;
+  results: BatchBlockResultItem[];
+}

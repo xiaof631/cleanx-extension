@@ -48,8 +48,28 @@
   padding: 4px 9px;
 }
 
+.cleanx-placeholder button:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
 .cleanx-placeholder button:hover {
   background: rgba(15, 20, 25, 0.06);
+}
+
+.cleanx-placeholder .cleanx-danger {
+  border-color: rgba(220, 38, 38, 0.3);
+  color: rgb(185, 28, 28);
+}
+
+.cleanx-placeholder .cleanx-danger:hover {
+  background: rgba(220, 38, 38, 0.08);
+}
+
+.cleanx-placeholder__status {
+  margin-top: 10px;
+  color: rgb(83, 100, 113);
+  font-size: 13px;
 }
 
 .cleanx-placeholder__details {
@@ -80,6 +100,16 @@
     background: rgba(239, 243, 244, 0.08);
   }
 
+  .cleanx-placeholder .cleanx-danger {
+    border-color: rgba(248, 113, 113, 0.35);
+    color: rgb(252, 165, 165);
+  }
+
+  .cleanx-placeholder .cleanx-danger:hover {
+    background: rgba(248, 113, 113, 0.12);
+  }
+
+  .cleanx-placeholder__status,
   .cleanx-placeholder__details {
     color: rgb(139, 152, 165);
   }

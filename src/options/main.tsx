@@ -5,7 +5,16 @@ import { addToBlacklist, loadBlacklist, removeFromBlacklist } from "../storage/b
 import { clearDetectionLog, loadDetectionLog } from "../storage/detectionLog";
 import { loadStats, resetTodayStats } from "../storage/stats";
 import { addToWhitelist, loadWhitelist, removeFromWhitelist } from "../storage/whitelist";
-import type { DailyStats, DetectionLogEntry, FilterLevel, HiddenMode, ListEntry, Settings } from "../shared/types";
+import type {
+  BatchBlockRequest,
+  BatchBlockResponse,
+  DailyStats,
+  DetectionLogEntry,
+  FilterLevel,
+  HiddenMode,
+  ListEntry,
+  Settings
+} from "../shared/types";
 import "../ui.css";
 
 function App() {
@@ -19,6 +28,9 @@ function App() {
   const [importText, setImportText] = useState("");
   const [error, setError] = useState("");
   const [logMode, setLogMode] = useState<"risky" | "all">("risky");
+  const [batchBlockStatus, setBatchBlockStatus] = useState("");
+  const [batchBlocking, setBatchBlocking] = useState(false);
+  const [batchBlockResults, setBatchBlockResults] = useState<BatchBlockResponse["results"]>([]);
 
   useEffect(() => {
     void refresh();
@@ -96,6 +108,8 @@ function App() {
   const hasLegacyScanCount = detectionLog.length === 0 && stats.scannedAccountCount > 0;
   const riskyDetectionLog = detectionLog.filter((entry) => entry.action !== "show");
   const visibleDetectionLog = logMode === "risky" ? riskyDetectionLog : detectionLog;
+  const blockTargets = visibleDetectionLog.filter((entry) => entry.action !== "show");
+  const failedBatchTargets = batchBlockResults.filter((result) => result.status !== "blocked");
 
   return (
     <main className="page">
@@ -178,6 +192,25 @@ function App() {
           <div className="row between">
             <h2>最近风险账号</h2>
             <div className="row">
+              <button
+                className="danger"
+                disabled={batchBlocking || blockTargets.length === 0}
+                onClick={() => void blockCurrentList(blockTargets)}
+              >
+                {batchBlocking ? "Block 中..." : `一键 Block 当前列表 (${blockTargets.length})`}
+              </button>
+              <button
+                disabled={batchBlocking || failedBatchTargets.length === 0}
+                onClick={() =>
+                  void retryBatchTargets(
+                    failedBatchTargets
+                      .map((result) => visibleDetectionLog.find((entry) => entry.username === result.username))
+                      .filter(Boolean) as DetectionLogEntry[]
+                  )
+                }
+              >
+                重试失败项 ({failedBatchTargets.length})
+              </button>
               <div className="segmented compact-tabs">
                 <button
                   className={logMode === "risky" ? "active" : ""}
@@ -204,6 +237,22 @@ function App() {
               </button>
             </div>
           </div>
+          {batchBlockStatus ? <div className="notice">{batchBlockStatus}</div> : null}
+          {batchBlockResults.length > 0 ? (
+            <div className="list compact-result-list">
+              {batchBlockResults.map((result) => (
+                <div className="list-item" key={result.username}>
+                  <div className="stack compact">
+                    <div className="handle">@{result.username || "unknown"}</div>
+                    {result.message ? <div className="muted">{result.message}</div> : null}
+                  </div>
+                  <span className={`badge ${batchResultBadgeClass(result.status)}`}>
+                    {batchResultLabel(result.status)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : null}
           <div className="list">
             {hasLegacyScanCount ? (
               <div className="notice">
@@ -258,6 +307,182 @@ function App() {
       </div>
     </main>
   );
+
+  async function blockCurrentList(entries: DetectionLogEntry[]) {
+    if (entries.length === 0 || batchBlocking) return;
+
+    const confirmed = window.confirm(
+      `将尝试在当前打开的 X 页面里逐个 Block ${entries.length} 个风险账号。只会处理当前页面能找到的账号，是否继续？`
+    );
+    if (!confirmed) return;
+
+    setBatchBlocking(true);
+    setBatchBlockStatus("正在向当前 X 页面发送批量 Block 请求...");
+    setBatchBlockResults([]);
+
+    try {
+      const response = await sendBatchBlockRequest(entries.map((entry) => entry.username));
+      setBatchBlockResults(response.results);
+      const blockedCount = response.results.filter((result) => result.status === "blocked").length;
+      const notFoundCount = response.results.filter((result) => result.status === "not_found").length;
+      const failed = response.results.filter((result) => result.status === "failed");
+
+      const summary = [
+        `已 Block ${blockedCount} 个`,
+        notFoundCount > 0 ? `当前页未找到 ${notFoundCount} 个` : "",
+        failed.length > 0 ? `失败 ${failed.length} 个` : ""
+      ]
+        .filter(Boolean)
+        .join("，");
+
+      const detail = failed.length
+        ? `。失败账号：${failed
+            .slice(0, 3)
+            .map((result) => `@${result.username || "unknown"}`)
+            .join("、")}`
+        : "";
+
+      setBatchBlockStatus(summary + detail);
+      await refresh();
+    } catch (err) {
+      setBatchBlockStatus(err instanceof Error ? err.message : "批量 Block 失败");
+    } finally {
+      setBatchBlocking(false);
+    }
+  }
+
+  async function retryBatchTargets(entries: DetectionLogEntry[]) {
+    if (entries.length === 0 || batchBlocking) return;
+
+    setBatchBlocking(true);
+    setBatchBlockStatus(`正在重试 ${entries.length} 个失败项...`);
+
+    try {
+      const response = await sendBatchBlockRequest(entries.map((entry) => entry.username));
+      setBatchBlockResults((previous) => mergeBatchResults(previous, response.results));
+
+      const blockedCount = response.results.filter((result) => result.status === "blocked").length;
+      const unresolvedCount = response.results.filter((result) => result.status !== "blocked").length;
+      setBatchBlockStatus(
+        unresolvedCount === 0
+          ? `重试完成，新增 Block ${blockedCount} 个`
+          : `重试完成，新增 Block ${blockedCount} 个，仍有 ${unresolvedCount} 个未完成`
+      );
+      await refresh();
+    } catch (err) {
+      setBatchBlockStatus(err instanceof Error ? err.message : "重试失败");
+    } finally {
+      setBatchBlocking(false);
+    }
+  }
+}
+
+async function sendBatchBlockRequest(usernames: string[]): Promise<BatchBlockResponse> {
+  const tabs = await getCandidateXTabs();
+  if (tabs.length === 0) {
+    throw new Error("未找到当前打开的 X 标签页，请先切到 x.com 或 twitter.com 页面");
+  }
+
+  const message: BatchBlockRequest = {
+    type: "cleanx:block-usernames",
+    usernames
+  };
+
+  let lastError: unknown;
+
+  for (const tab of tabs) {
+    if (!tab.id) continue;
+
+    try {
+      const response = await sendMessageToXTab(tab.id, message);
+      if (response) return response;
+      lastError = new Error("当前 X 页面没有响应");
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  if (isReceivingEndMissing(lastError)) {
+    throw new Error("目标 X 页面无法接入内容脚本。请确认页面是 x.com / twitter.com，并重新加载扩展后重试。");
+  }
+
+  throw new Error(lastError instanceof Error ? lastError.message : "当前 X 页面没有响应，请刷新页面后重试");
+}
+
+async function sendMessageToXTab(
+  tabId: number,
+  message: BatchBlockRequest
+): Promise<BatchBlockResponse | undefined> {
+  try {
+    return (await chrome.tabs.sendMessage(tabId, message)) as BatchBlockResponse | undefined;
+  } catch (error) {
+    if (!isReceivingEndMissing(error)) throw error;
+  }
+
+  await injectContentRuntime(tabId);
+  await delay(250);
+  return (await chrome.tabs.sendMessage(tabId, message)) as BatchBlockResponse | undefined;
+}
+
+async function injectContentRuntime(tabId: number) {
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    files: ["content.js"]
+  });
+
+  await chrome.scripting.insertCSS({
+    target: { tabId },
+    files: ["content.css"]
+  });
+}
+
+async function getCandidateXTabs(): Promise<chrome.tabs.Tab[]> {
+  const tabs = await chrome.tabs.query({
+    url: ["https://x.com/*", "https://twitter.com/*"]
+  });
+
+  return [...tabs].sort((left, right) => {
+    const activeDelta = Number(right.active) - Number(left.active);
+    if (activeDelta !== 0) return activeDelta;
+
+    const accessedDelta = (right.lastAccessed ?? 0) - (left.lastAccessed ?? 0);
+    if (accessedDelta !== 0) return accessedDelta;
+
+    return (right.id ?? 0) - (left.id ?? 0);
+  });
+}
+
+function isReceivingEndMissing(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes("Receiving end does not exist");
+}
+
+function delay(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function mergeBatchResults(
+  previous: BatchBlockResponse["results"],
+  next: BatchBlockResponse["results"]
+): BatchBlockResponse["results"] {
+  const nextByUsername = new Map(next.map((result) => [result.username, result]));
+
+  return [
+    ...previous.map((result) => nextByUsername.get(result.username) ?? result),
+    ...next.filter((result) => !previous.some((item) => item.username === result.username))
+  ];
+}
+
+function batchResultLabel(status: BatchBlockResponse["results"][number]["status"]) {
+  if (status === "blocked") return "已 Block";
+  if (status === "not_found") return "未找到";
+  return "失败";
+}
+
+function batchResultBadgeClass(status: BatchBlockResponse["results"][number]["status"]) {
+  if (status === "blocked") return "badge-success";
+  if (status === "not_found") return "badge-collapse";
+  return "badge-hide";
 }
 
 function DetectionLogItem({ entry }: { entry: DetectionLogEntry }) {

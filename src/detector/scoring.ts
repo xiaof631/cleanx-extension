@@ -2,6 +2,7 @@ import type { AccountInfo, ContentInfo, DetectionReason } from "../shared/types"
 import {
   bioKeywordRules,
   displayNameRules,
+  randomSuffixPatterns,
   suspiciousLinkPatterns,
   textKeywordRules,
   usernameRules,
@@ -9,7 +10,11 @@ import {
 } from "./rules";
 
 const emojiPattern = /[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu;
+const emojiRunPattern = /(?:[\p{Emoji_Presentation}\p{Extended_Pictographic}]\uFE0F?\s*){2,}/gu;
 const urlPattern = /https?:\/\/\S+/gi;
+const shortCodePattern = /[a-z]\d{2,3}/i;
+const emotionalBaitPattern =
+  /(?:求抱抱|会疼人的?(?:哥哥|姐姐)|线下的?(?:哥哥|姐姐)|想找.{0,8}(?:哥哥|姐姐|对象)|dd个线下.{0,6}(?:哥哥|姐姐|对象)?|(?:小狗|猫咪).{0,4}求抱抱|求(?:收留|带走))/iu;
 
 export function calculateScore(account: AccountInfo, content: ContentInfo): {
   score: number;
@@ -23,6 +28,9 @@ export function calculateScore(account: AccountInfo, content: ContentInfo): {
   applyTextRules(content.text ?? "", textKeywordRules, reasons);
   applyLinkScore([account.externalUrl, content.url, content.text].filter(Boolean).join(" "), reasons);
   applyEmojiScore(content.text ?? "", reasons);
+  applyShortCodeScore(content.text ?? "", reasons);
+  applyEmojiBaitScore(content.text ?? "", reasons);
+  applyBaitCombinationScore(account, content.text ?? "", reasons);
   applyRepetitionScore(content.text ?? "", reasons);
 
   const score = Math.min(
@@ -70,15 +78,77 @@ function applyLinkScore(value: string, reasons: DetectionReason[]) {
 }
 
 function applyEmojiScore(text: string, reasons: DetectionReason[]) {
-  if (text.length < 12) return;
-  const emojiCount = Array.from(text.matchAll(emojiPattern)).length;
-  const density = emojiCount / Array.from(text).length;
-  if (density < 0.25) return;
+  const normalized = text.trim().replace(/\s+/g, "");
+  const charCount = Array.from(normalized).length;
+  if (charCount < 8) return;
+
+  const emojiCount = Array.from(normalized.matchAll(emojiPattern)).length;
+  const density = emojiCount / charCount;
+  if (density < 0.22 && !(charCount <= 20 && emojiCount >= 3 && density >= 0.16)) return;
 
   reasons.push({
     ruleId: "emoji_density_high",
     label: "emoji 密度较高",
     score: 15
+  });
+}
+
+function applyShortCodeScore(text: string, reasons: DetectionReason[]) {
+  const normalized = text.trim().replace(/\s+/g, "");
+  const charCount = Array.from(normalized).length;
+  if (charCount === 0 || charCount > 24) return;
+  if (!/[\u4e00-\u9fff]/u.test(normalized)) return;
+  if (!shortCodePattern.test(normalized)) return;
+
+  reasons.push({
+    ruleId: "short_code_in_short_text",
+    label: "短文本含异常编号",
+    score: 22
+  });
+}
+
+function applyEmojiBaitScore(text: string, reasons: DetectionReason[]) {
+  const normalized = text.trim().replace(/\s+/g, "");
+  const charCount = Array.from(normalized).length;
+  if (charCount === 0 || charCount > 24) return;
+
+  const emojiCount = Array.from(normalized.matchAll(emojiPattern)).length;
+  if (emojiCount < 3) return;
+
+  const emojiRuns = Array.from(normalized.matchAll(emojiRunPattern));
+  const hasEmojiRun = emojiRuns.length > 0;
+  const hasShortCode = shortCodePattern.test(normalized);
+  if (!hasEmojiRun || !hasShortCode) return;
+
+  reasons.push({
+    ruleId: "emoji_bait_short_code",
+    label: "短文本含连续表情与编号",
+    score: 35
+  });
+}
+
+function applyBaitCombinationScore(account: AccountInfo, text: string, reasons: DetectionReason[]) {
+  const normalized = text.trim().replace(/\s+/g, "");
+  const charCount = Array.from(normalized).length;
+  if (charCount === 0 || charCount > 30) return;
+  if (!/[\u4e00-\u9fff]/u.test(normalized)) return;
+
+  const hasBaitPhrase = emotionalBaitPattern.test(normalized);
+  const hasShortCode = shortCodePattern.test(normalized);
+  const emojiCount = Array.from(normalized.matchAll(emojiPattern)).length;
+  const hasEmojiRun = Array.from(normalized.matchAll(emojiRunPattern)).length > 0;
+  const hasRandomSuffix = randomSuffixPatterns.some((pattern) => pattern.test(account.username));
+
+  const signalCount = [hasBaitPhrase, hasShortCode, hasEmojiRun || emojiCount >= 3, hasRandomSuffix].filter(
+    Boolean
+  ).length;
+
+  if (signalCount < 3 || !hasBaitPhrase) return;
+
+  reasons.push({
+    ruleId: "bait_signal_combination",
+    label: "短文本命中多项引流特征",
+    score: 28
   });
 }
 

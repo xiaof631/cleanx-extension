@@ -6,6 +6,8 @@ export interface RuleDefinition {
   patterns?: RegExp[];
 }
 
+export const randomSuffixPatterns = [/[a-z][a-z0-9_]{3,}\d{4,}$/i, /[a-z]+\d+[a-z]+\d+/i];
+
 export const bioKeywordRules: RuleDefinition[] = [
   {
     id: "bio_lead_generation",
@@ -25,8 +27,8 @@ export const usernameRules: RuleDefinition[] = [
   {
     id: "username_random_suffix",
     label: "用户名疑似批量生成",
-    score: 10,
-    patterns: [/[a-z]{4,}\d{5,}$/i, /[a-z]+\d+[a-z]+\d+/i]
+    score: 12,
+    patterns: randomSuffixPatterns
   },
   {
     id: "username_spam_terms",
@@ -42,6 +44,13 @@ export const displayNameRules: RuleDefinition[] = [
     label: "昵称疑似导流",
     score: 20,
     keywords: ["私信", "接推广", "互关", "返现", "空投", "福利"]
+  },
+  {
+    id: "display_name_emotional_bait",
+    label: "昵称疑似情绪诱导",
+    score: 15,
+    keywords: ["少女", "学姐", "求抱抱", "线下", "哥哥"],
+    patterns: [/^[^\n]{0,12}[♡❤♥]\s*$/u]
   }
 ];
 
@@ -63,6 +72,19 @@ export const textKeywordRules: RuleDefinition[] = [
     label: "正文疑似成人营销",
     score: 28,
     keywords: ["onlyfans", "fansly", "nsfw", "裸聊", "成人视频"]
+  },
+  {
+    id: "text_emotional_bait",
+    label: "正文疑似情绪诱导引流",
+    score: 30,
+    keywords: ["求抱抱", "会疼人的哥哥", "线下的哥哥", "线下哥哥", "会疼人的姐姐", "求收留", "求带走"],
+    patterns: [
+      /想找.{0,8}(哥哥|姐姐|对象)/u,
+      /dd个线下.{0,6}(哥哥|姐姐|对象)?/iu,
+      /(?:小狗|猫咪).{0,4}求抱抱/u,
+      /会疼人.{0,6}(哥哥|姐姐|对象)/u,
+      /求(收留|带走)/u
+    ]
   }
 ];
 
