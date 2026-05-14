@@ -2,7 +2,7 @@ import { detect } from "../detector";
 import { hasChromeStorageChangeListener, ignoreExtensionContextInvalidated, loadSettings } from "../storage";
 import { recordDetection } from "../storage/detectionLog";
 import { incrementScannedAccountCount } from "../storage/stats";
-import { PROCESSED_ATTR, STORAGE_KEYS } from "../shared/constants";
+import { PROCESSED_ATTR, PROCESSED_VERSION, STORAGE_KEYS } from "../shared/constants";
 import type { Settings } from "../shared/types";
 import { extractContentNode } from "./extractor";
 import { applyAction, restoreCleanXNodes } from "./renderer";
@@ -15,8 +15,8 @@ let flushTimer: number | undefined;
 let settingsCache: Settings | undefined;
 
 export async function processContentNode(node: Element) {
-  if (node.getAttribute(PROCESSED_ATTR) === "true") return;
-  node.setAttribute(PROCESSED_ATTR, "true");
+  if (node.getAttribute(PROCESSED_ATTR) === PROCESSED_VERSION) return;
+  node.setAttribute(PROCESSED_ATTR, PROCESSED_VERSION);
 
   const settings = settingsCache ?? (await loadSettings());
   settingsCache = settings;
@@ -105,7 +105,7 @@ function enqueueNodes(nodes: Element[]) {
 }
 
 function clearProcessedMarks() {
-  document.querySelectorAll(`[${PROCESSED_ATTR}="true"]`).forEach((node) => {
+  document.querySelectorAll(`[${PROCESSED_ATTR}]`).forEach((node) => {
     node.removeAttribute(PROCESSED_ATTR);
   });
 }

@@ -14,7 +14,9 @@ const emojiRunPattern = /(?:[\p{Emoji_Presentation}\p{Extended_Pictographic}]\uF
 const urlPattern = /https?:\/\/\S+/gi;
 const shortCodePattern = /[a-z]\d{2,3}/i;
 const emotionalBaitPattern =
-  /(?:求抱抱|会疼人的?(?:哥哥|姐姐)|线下的?(?:哥哥|姐姐)|想找.{0,8}(?:哥哥|姐姐|对象)|dd个线下.{0,6}(?:哥哥|姐姐|对象)?|(?:小狗|猫咪).{0,4}求抱抱|求(?:收留|带走))/iu;
+  /(?:求抱抱|会疼人的?(?:哥哥|姐姐)|线下的?(?:哥哥|姐姐)|想找.{0,8}(?:哥哥|姐姐|对象)|dd个线下.{0,6}(?:哥哥|姐姐|对象)?|(?:小狗|猫咪).{0,4}求抱抱|求(?:收留|带走)|心[忘觉归映]|人间|惜君|小?心壶|余生|半生|随心|自在|温柔|心无波澜|世事|变迁|岁月|安然)/iu;
+const decorativeSymbolPattern = /(?:[ღ♧✈★☆♡♥❤✧✦✿❀❁∞༄～づ╰╯｡]+|౨ৎ)/u;
+const noisyBaitPattern = /(?:心[忘觉归映]|人间|惜君|小?心壶|余生|半生|随心|自在|温柔|心无波澜|世事|变迁|岁月|安然|求)/u;
 
 export function calculateScore(account: AccountInfo, content: ContentInfo): {
   score: number;
@@ -31,6 +33,7 @@ export function calculateScore(account: AccountInfo, content: ContentInfo): {
   applyShortCodeScore(content.text ?? "", reasons);
   applyEmojiBaitScore(content.text ?? "", reasons);
   applyBaitCombinationScore(account, content.text ?? "", reasons);
+  applyDecorativeBaitScore(account, content.text ?? "", reasons);
   applyRepetitionScore(content.text ?? "", reasons);
 
   const score = Math.min(
@@ -150,6 +153,36 @@ function applyBaitCombinationScore(account: AccountInfo, text: string, reasons: 
     label: "短文本命中多项引流特征",
     score: 28
   });
+}
+
+function applyDecorativeBaitScore(account: AccountInfo, text: string, reasons: DetectionReason[]) {
+  const normalized = text.trim().replace(/\s+/g, "");
+  const charCount = Array.from(normalized).length;
+  if (charCount < 8 || charCount > 36) return;
+  if (!/[\u4e00-\u9fff]/u.test(normalized)) return;
+
+  const hasRandomSuffix = randomSuffixPatterns.some((pattern) => pattern.test(account.username));
+  const hasRandomIdentity = hasRandomizedNameIdentity(account);
+  const hasDecorativeSymbols = decorativeSymbolPattern.test(normalized);
+  const hasNoisyBait = noisyBaitPattern.test(normalized);
+  const emojiCount = Array.from(normalized.matchAll(emojiPattern)).length;
+
+  if (!hasRandomSuffix || !hasRandomIdentity || !hasDecorativeSymbols || !hasNoisyBait) return;
+
+  reasons.push({
+    ruleId: "decorative_bait_short_text",
+    label: "短文本含异常装饰符号与诱导文案",
+    score: emojiCount > 0 ? 28 : 24
+  });
+}
+
+function hasRandomizedNameIdentity(account: AccountInfo) {
+  const username = account.username.trim().toLowerCase();
+  const displayName = (account.displayName ?? "").trim().toLowerCase().replace(/[^a-z0-9_]/g, "");
+  if (!displayName) return /\d/.test(username);
+
+  const usernameStem = username.replace(/\d+$/g, "");
+  return displayName === username || displayName === usernameStem;
 }
 
 function applyRepetitionScore(text: string, reasons: DetectionReason[]) {

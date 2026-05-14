@@ -6,9 +6,11 @@ import { scanExistingNodes, startObserve, watchStorageChanges } from "./scanner"
 
 declare global {
   interface Window {
-    __cleanxContentRuntimeStarted?: boolean;
+    __cleanxContentRuntimeVersion?: string;
   }
 }
+
+const CONTENT_RUNTIME_VERSION = "2026-05-13-decorative-bait-v2";
 
 async function bootstrap() {
   const settings = await loadSettings();
@@ -54,8 +56,8 @@ function registerMessageHandlers() {
   });
 }
 
-if (!window.__cleanxContentRuntimeStarted) {
-  window.__cleanxContentRuntimeStarted = true;
+if (window.__cleanxContentRuntimeVersion !== CONTENT_RUNTIME_VERSION) {
+  window.__cleanxContentRuntimeVersion = CONTENT_RUNTIME_VERSION;
   registerMessageHandlers();
   void bootstrap().catch((error) => {
     if (isExtensionContextInvalidated(error)) return;

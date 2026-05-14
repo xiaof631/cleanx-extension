@@ -6,7 +6,11 @@ export interface RuleDefinition {
   patterns?: RegExp[];
 }
 
-export const randomSuffixPatterns = [/[a-z][a-z0-9_]{3,}\d{4,}$/i, /[a-z]+\d+[a-z]+\d+/i];
+export const randomSuffixPatterns = [
+  /[a-z][a-z0-9_]{3,}\d{4,}$/i,
+  /[a-z]+\d+[a-z]+\d+/i,
+  /^[a-z]{3,8}$/i
+];
 
 export const bioKeywordRules: RuleDefinition[] = [
   {
@@ -77,13 +81,44 @@ export const textKeywordRules: RuleDefinition[] = [
     id: "text_emotional_bait",
     label: "正文疑似情绪诱导引流",
     score: 30,
-    keywords: ["求抱抱", "会疼人的哥哥", "线下的哥哥", "线下哥哥", "会疼人的姐姐", "求收留", "求带走"],
+    keywords: [
+      "求抱抱",
+      "会疼人的哥哥",
+      "线下的哥哥",
+      "线下哥哥",
+      "会疼人的姐姐",
+      "求收留",
+      "求带走",
+      "人间",
+      "惜君",
+      "小心壶",
+      "心壶",
+      "余生",
+      "半生",
+      "随心",
+      "自在",
+      "温柔",
+      "心无波澜",
+      "世事",
+      "变迁",
+      "安然"
+    ],
     patterns: [
       /想找.{0,8}(哥哥|姐姐|对象)/u,
       /dd个线下.{0,6}(哥哥|姐姐|对象)?/iu,
       /(?:小狗|猫咪).{0,4}求抱抱/u,
       /会疼人.{0,6}(哥哥|姐姐|对象)/u,
-      /求(收留|带走)/u
+      /求(收留|带走)/u,
+      /心[忘觉归映]/u,
+      /人间/u,
+      /岁月/u,
+      /心壶/u,
+      /余生/u,
+      /半生/u,
+      /心无波澜/u,
+      /世事/u,
+      /变迁/u,
+      /安然/u
     ]
   }
 ];

@@ -22,4 +22,5 @@ export const THRESHOLDS = {
 } as const;
 
 export const PROCESSED_ATTR = "data-cleanx-processed";
+export const PROCESSED_VERSION = "rules-2026-05-13-decorative-bait-v2";
 export const HIDDEN_ATTR = "data-cleanx-hidden";
